@@ -107,10 +107,6 @@ function setupGlobalEvents() {
         updateLivePreview(DOM);
     };
 
-    // Toggle Switches
-    DOM.pickerToggle.onclick = () => handlePicker('toggle', State, DOM);
-    DOM.highlightToggle.onclick = () => handlePicker('highlight', State, DOM);
-
     // Keyboard Shortcuts
     setupKeyboardShortcuts({
         onSave: saveCurrentFlow,

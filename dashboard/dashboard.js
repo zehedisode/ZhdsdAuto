@@ -1,15 +1,4 @@
-/**
- * 🌊 ZhdsdAuto Dashboard Controller (UI Orchestrator)
- * 
- * Bu dosya Kullanıcı Arayüzünün (UI) beynidir.
- * 
- * 🎮 Sorumluluklar:
- * 1. Olayları Dinle: Tıklama, sürükle-bırak, input değişiklikleri.
- * 2. Durumu Yönet (State): Hangi akış seçili, hangi blok düzenleniyor.
- * 3. Veriyi Yönet (Storage): Akışları kaydet, yükle, sil.
- * 4. Çizim Yap (Renderer): UI güncellemelerini `ui-render.js` modülüne yaptır.
- * 5. İletişim Kur: Arka plan servisi (Service Worker) ile mesajlaş (Başlat/Durdur).
- */
+/** 🌊 ZhdsdAuto Dashboard Controller (UI Orchestrator) */
 
 import { BLOCK_TYPES, CATEGORIES, TEMPLATES } from './modules/constants.js';
 import { generateId, showToast } from './modules/utils.js';
@@ -22,6 +11,7 @@ import { handleBackupDownload, handleRestoreFileChange } from './modules/backup.
 import { renderButtonsView, openButtonModal, closeButtonModal, handleButtonFormSubmit, updateLivePreview } from './modules/page-buttons.js';
 import { cacheDOMRefs } from './modules/dom-refs.js';
 import { injectButtonModal } from './modules/button-modal.js';
+import { cloneBlock, setupContextMenu, setupKeyboardShortcuts } from './modules/shortcuts.js';
 
 // DOM Referansları
 let DOM = {};
@@ -39,19 +29,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderPalette();
     renderTemplatesList();
     renderFlowsView();
-
-    // Chrome Mesaj Dinleyicisi
     chrome.runtime.onMessage.addListener((msg) => handleMessage(msg, State, DOM));
 });
 
-// ===================================================================
 // EVENT LISTENERS
-// ===================================================================
 function setupGlobalEvents() {
-    // Navigasyon
-    DOM.navItems.forEach(item => {
-        item.addEventListener('click', () => switchView(item.dataset.view));
-    });
+    DOM.navItems.forEach(item => item.addEventListener('click', () => switchView(item.dataset.view)));
 
     // Akış İşlemleri
     DOM.createFlowBtn.onclick = createNewFlow;
@@ -125,6 +108,19 @@ function setupGlobalEvents() {
     };
 
     // Toggle Switches
+    DOM.pickerToggle.onclick = () => handlePicker('toggle', State, DOM);
+    DOM.highlightToggle.onclick = () => handlePicker('highlight', State, DOM);
+
+    // Keyboard Shortcuts
+    setupKeyboardShortcuts({
+        onSave: saveCurrentFlow,
+        onRun: () => runFlow(State, DOM, saveCurrentFlow),
+        onDelete: removeBlock,
+        onClone: handleCloneBlock,
+        onEscape: closeConfig,
+        getSelectedBlockId: () => State.selectedBlockId
+    });
+
     DOM.autoRunToggle.onclick = () => DOM.autoRunSwitch.classList.toggle('active');
     DOM.pulseToggle.onclick = () => DOM.pulseSwitch.classList.toggle('active');
 
@@ -132,9 +128,7 @@ function setupGlobalEvents() {
     DOM.btnLabel.addEventListener('input', () => updateLivePreview(DOM));
 }
 
-// ===================================================================
 // VIEW LOGIC
-// ===================================================================
 function switchView(viewId) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById(viewId + 'View').classList.add('active');
@@ -144,9 +138,7 @@ function switchView(viewId) {
     if (viewId === 'buttons') renderButtonsView(State, DOM);
 }
 
-// ===================================================================
-// RENDERERS (Delegation)
-// ===================================================================
+// RENDERERS
 function renderFlowsView() {
     Renderer.renderFlowsList(State.flows, DOM.flowsGrid, (id) => {
         // Edit Action
@@ -257,12 +249,18 @@ function renderBuilder() {
 
         // 4. Drag & Drop Logic
         setupDragAndDrop(container, State, renderBuilder);
+
+        // 5. Context Menu (Sağ Tık)
+        setupContextMenu(container, {
+            onClone: handleCloneBlock,
+            onDelete: removeBlock,
+            onMoveUp: moveBlock,
+            onMoveDown: moveBlock
+        });
     });
 }
 
-// ===================================================================
-// ACTIONS (Business Logic)
-// ===================================================================
+// ACTIONS
 function createNewFlow() {
     const newFlow = {
         id: generateId(),
@@ -302,9 +300,18 @@ function addBlock(type) {
 function removeBlock(blockId) {
     State.currentFlow.blocks = State.currentFlow.blocks.filter(b => String(b.id) !== String(blockId));
     if (String(State.selectedBlockId) === String(blockId)) {
-        State.selectBlock(null); // Sadece state'i temizle
+        State.selectBlock(null);
     }
     renderBuilder();
+}
+
+function handleCloneBlock(blockId) {
+    const clone = cloneBlock(blockId, State.currentFlow, generateId);
+    if (clone) {
+        renderBuilder();
+        selectBlock(clone.id);
+        showToast('📋 Blok klonlandı', DOM);
+    }
 }
 
 function selectBlock(blockId) {
@@ -381,12 +388,8 @@ function moveBlock(id, dir) {
 }
 
 function closeConfig() {
-    // Inline modunda bu fonksiyona gerek kalmadı ama referansları kırmamak için boş bırakabiliriz
     State.selectBlock(null);
-    document.querySelectorAll('.block-config-inline').forEach(el => {
-        el.classList.add('hidden');
-        el.innerHTML = '';
-    });
+    document.querySelectorAll('.block-config-inline').forEach(el => { el.classList.add('hidden'); el.innerHTML = ''; });
     document.querySelectorAll('.block-item').forEach(el => el.classList.remove('selected'));
 }
 

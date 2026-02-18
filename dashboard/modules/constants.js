@@ -246,6 +246,19 @@ export const BLOCK_TYPES = {
             { key: 'value', label: 'Değer', type: 'text', required: true, placeholder: 'örn: 1' }
         ]
     },
+    readTable: {
+        id: 'readTable',
+        category: 'data',
+        icon: '📊',
+        name: 'Tablo Oku',
+        color: '#06b6d4',
+        description: 'HTML tablosundaki verileri okur ve değişkene kaydeder',
+        details: 'Bir <table> elementini JSON dizisine çevirir.\n• Her satır bir obje olur, sütun başlıkları anahtar olarak kullanılır.\n• Başlık yoksa "col1", "col2" gibi isimler atanır.',
+        params: [
+            { key: 'selector', label: 'Tablo Selector', type: 'selector', required: true, placeholder: 'table, .data-table' },
+            { key: 'variable', label: 'Değişken Adı', type: 'text', required: true, placeholder: 'örn: tablo_verisi' }
+        ]
+    },
 
 
     // LOGIC
@@ -256,11 +269,12 @@ export const BLOCK_TYPES = {
         name: 'Koşul',
         color: '#ef4444',
         description: 'Eğer X ise çalıştır',
-        details: 'Akışın devam edip etmeyeceğine karar verir. Koşul sağlanmazsa akış durabilir veya atlayabilir (Geliştirme aşamasında).',
+        details: 'Akışın devam edip etmeyeceğine karar verir.\n• "Dur": Koşul sağlanmazsa akış durur.\n• "Atla": Koşul sağlanmazsa sonraki N bloğu atlar.',
         params: [
             { key: 'selector', label: 'Element (Opsiyonel)', type: 'selector' },
             { key: 'check', label: 'Kontrol', type: 'select', options: ['var (görünür)', 'yok (gizli)', 'metin içerir', 'metin eşittir'], default: 'var (görünür)' },
-            { key: 'value', label: 'Değer (Metin ise)', type: 'text' }
+            { key: 'value', label: 'Değer (Metin ise)', type: 'text' },
+            { key: 'onFail', label: 'Başarısız ise', type: 'select', options: ['dur', 'sonraki 1 bloğu atla', 'sonraki 2 bloğu atla', 'sonraki 3 bloğu atla', 'sonraki 5 bloğu atla'], default: 'dur' }
         ]
     },
     loop: {

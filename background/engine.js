@@ -51,6 +51,30 @@ class FlowEngine {
                 const meta = getBlockMeta(block.type);
                 onStatus({ state: 'running', flowId: flow.id, flowName: flow.name, total: totalBlocks, current: executedCount, blockIcon: meta.icon, message: `${meta.name} çalıştırılıyor...` });
 
+                // Condition bloğu: skip mantığı gerektirir
+                if (block.type === 'condition') {
+                    const p = {};
+                    if (block.params) {
+                        for (const key in block.params) p[key] = this.interpolate(block.params[key]);
+                    }
+                    const result = await Promise.race([
+                        execCondition(this, p, tabId),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error(`${meta.name} zaman aşımına uğradı (30s)`)), 30000))
+                    ]);
+                    if (!result.pass) {
+                        const onFail = p.onFail || 'dur';
+                        if (onFail === 'dur') {
+                            throw new Error(`Koşul sağlanmadı: ${result.reason}`);
+                        }
+                        // "sonraki N bloğu atla" → N'yi parse et
+                        const skipMatch = onFail.match(/(\d+)/);
+                        const skipCount = skipMatch ? parseInt(skipMatch[1], 10) : 1;
+                        onStatus({ state: 'running', flowId: flow.id, flowName: flow.name, total: totalBlocks, current: executedCount, message: `⏭️ Koşul sağlanmadı, ${skipCount} blok atlanıyor...` });
+                        i += skipCount;
+                    }
+                    continue;
+                }
+
                 // Loop ve ForEach blokları alt blokları yönetir, özel handle
                 if (block.type === 'loop' || block.type === 'forEach') {
                     const handler = block.type === 'loop' ? execLoop : execForEach;
@@ -160,10 +184,7 @@ class FlowEngine {
             case 'readTable':
                 return await execInContent(this, tabId, block.type.toUpperCase(), p);
 
-            // === Flow Control (modules/flow-control.js) ===
-            case 'condition':
-                return await execCondition(this, p, tabId);
-            // loop ve forEach run() içinde handle edilir
+            // condition, loop ve forEach run() içinde handle edilir
 
             default:
                 throw new Error(`"${block.type}" blok tipi henüz implement edilmemiş`);

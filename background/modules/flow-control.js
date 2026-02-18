@@ -9,12 +9,12 @@ import { execInContent } from './actions.js';
 /**
  * Condition (Koşul) Bloğu
  * Element varlığını veya metin içeriğini kontrol eder.
- * Koşul sağlanmazsa hata fırlatır ve akış durur.
+ * Sonuç: { pass: boolean, reason: string }
  * 
  * @param {FlowEngine} engine
- * @param {Object} params - { selector, check, value }
+ * @param {Object} params - { selector, check, value, onFail }
  * @param {number} tabId
- * @returns {number} tabId
+ * @returns {{ pass: boolean, reason: string }}
  */
 export async function execCondition(engine, params, tabId) {
     if (!tabId) throw new Error('Koşul kontrolü için aktif sekme gerekli');
@@ -37,12 +37,12 @@ export async function execCondition(engine, params, tabId) {
                 case 'metin içerir':
                     if (!el) return { pass: false, reason: `Element bulunamadı: ${selector}` };
                     const text = (el.innerText || el.textContent || '').trim();
-                    return { pass: text.includes(value), reason: `Metin "${value}" içermiyor. Mevcut: "${text.slice(0, 100)}"` };
+                    return { pass: text.includes(value), reason: `Metin "${value}" içermiyor` };
 
                 case 'metin eşittir':
                     if (!el) return { pass: false, reason: `Element bulunamadı: ${selector}` };
                     const txt = (el.innerText || el.textContent || '').trim();
-                    return { pass: txt === value, reason: `Metin eşleşmiyor. Beklenen: "${value}", Mevcut: "${txt.slice(0, 100)}"` };
+                    return { pass: txt === value, reason: `Beklenen: "${value}", Mevcut: "${txt.slice(0, 80)}"` };
 
                 default:
                     return { pass: false, reason: `Bilinmeyen kontrol tipi: ${check}` };
@@ -53,9 +53,8 @@ export async function execCondition(engine, params, tabId) {
 
     const res = result[0]?.result;
     if (!res) throw new Error('Koşul kontrolü çalıştırılamadı');
-    if (!res.pass) throw new Error(`Koşul sağlanmadı: ${res.reason}`);
 
-    return tabId;
+    return { pass: res.pass, reason: res.reason || '' };
 }
 
 /**

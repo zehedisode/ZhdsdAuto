@@ -150,6 +150,25 @@ export async function execInContent(engine, tabId, action, params) {
                                 return { success: true, data: rawText };
                             case 'READATTRIBUTE':
                                 return { success: true, data: el.getAttribute(p.attribute) };
+                            case 'READTABLE': {
+                                const rows = el.querySelectorAll('tr');
+                                if (!rows.length) return { success: true, data: '[]' };
+                                // Başlıkları al (thead veya ilk satır)
+                                const headerRow = el.querySelector('thead tr') || rows[0];
+                                const headers = Array.from(headerRow.querySelectorAll('th, td'))
+                                    .map((cell, i) => cell.innerText.trim() || `col${i + 1}`);
+                                const startIdx = el.querySelector('thead') ? 0 : 1;
+                                const data = [];
+                                const bodyRows = el.querySelectorAll('tbody tr');
+                                const dataRows = bodyRows.length ? bodyRows : Array.from(rows).slice(startIdx);
+                                dataRows.forEach(row => {
+                                    const cells = row.querySelectorAll('td, th');
+                                    const obj = {};
+                                    headers.forEach((h, i) => { obj[h] = cells[i] ? cells[i].innerText.trim() : ''; });
+                                    data.push(obj);
+                                });
+                                return { success: true, data: JSON.stringify(data) };
+                            }
                             case 'WAITFORELEMENT':
                                 return { success: !!el };
                             case 'KEYBOARD':

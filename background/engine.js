@@ -5,6 +5,7 @@
 import { interpolate, waitForTabLoad } from './modules/utils.js';
 import * as Tabs from './modules/tabs.js';
 import { execInContent } from './modules/actions.js';
+import { execCondition, execLoop, execForEach } from './modules/flow-control.js';
 import { BLOCK_TYPES } from '../dashboard/modules/constants.js';
 
 // Blok meta bilgisini constants.js'ten al (tek kaynak)
@@ -50,7 +51,23 @@ class FlowEngine {
                 const meta = getBlockMeta(block.type);
                 onStatus({ state: 'running', flowId: flow.id, flowName: flow.name, total: totalBlocks, current: executedCount, blockIcon: meta.icon, message: `${meta.name} çalıştırılıyor...` });
 
-                tabId = await this.executeBlock(block, tabId);
+                // Loop ve ForEach blokları alt blokları yönetir, özel handle
+                if (block.type === 'loop' || block.type === 'forEach') {
+                    const handler = block.type === 'loop' ? execLoop : execForEach;
+                    const result = await Promise.race([
+                        handler(this, flow, i, tabId, onStatus),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error(`${meta.name} zaman aşımına uğradı (30s)`)), 30000))
+                    ]);
+                    tabId = result.tabId;
+                    i = result.skipTo; // İç blokları atla
+                    continue;
+                }
+
+                // Her blok için 30 saniye timeout
+                tabId = await Promise.race([
+                    this.executeBlock(block, tabId),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error(`${meta.name} zaman aşımına uğradı (30s)`)), 30000))
+                ]);
             }
 
             onStatus({ state: 'completed', flowId: flow.id, flowName: flow.name, total: totalBlocks, current: totalBlocks, message: `✅ "${flow.name}" başarıyla tamamlandı!` });
@@ -143,16 +160,17 @@ class FlowEngine {
             case 'readTable':
                 return await execInContent(this, tabId, block.type.toUpperCase(), p);
 
+            // === Flow Control (modules/flow-control.js) ===
+            case 'condition':
+                return await execCondition(this, p, tabId);
+            // loop ve forEach run() içinde handle edilir
+
             default:
-                console.warn(`Block type ${block.type} not implemented yet.`);
-                return tabId;
+                throw new Error(`"${block.type}" blok tipi henüz implement edilmemiş`);
         }
     }
 
     stop() { this.running = false; }
 }
 
-// Export a singleton or class based on usage. 
-// Assuming previously it was used as `const engine = new FlowEngine();`
-// We need to check how it's used in background.js. Usually it's exported as the class.
-export default FlowEngine; // Or modify based on how it is imported.
+export default FlowEngine;

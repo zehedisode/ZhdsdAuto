@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlowMate</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+
+<body>
+    <div class="app">
+        <!-- ===== Header ===== -->
+        <header class="header">
+            <div class="header-brand">
+                <div class="header-logo">
+                    <img src="../icons/icon48.png" alt="FlowMate" width="28" height="28">
+                </div>
+                <div class="header-text">
+                    <h1>FlowMate</h1>
+                    <span class="header-subtitle">Akıllı Otomasyon</span>
+                </div>
+            </div>
+            <div class="header-status" id="statusDot">
+                <span class="status-dot idle"></span>
+                <span class="status-text" id="statusText">Hazır</span>
+            </div>
+        </header>
+
+        <!-- ===== Status Banner ===== -->
+        <div class="status-banner hidden" id="statusBanner">
+            <div class="status-banner-icon" id="bannerIcon">⚡</div>
+            <div class="status-banner-content">
+                <div class="status-banner-message" id="bannerMessage">Akış çalışıyor...</div>
+                <div class="status-banner-progress">
+                    <div class="progress-bar" id="progressBar"></div>
+                </div>
+            </div>
+            <button class="status-banner-stop" id="stopBtn" title="Durdur">■</button>
+        </div>
+
+        <!-- ===== Main Content ===== -->
+        <main class="main">
+            <!-- Flows List View -->
+            <div class="view" id="flowsView">
+                <div class="section-header">
+                    <h2>Akışlarım</h2>
+                    <button class="btn btn-primary btn-sm" id="newFlowBtn">
+                        <span>+</span> Yeni Akış
+                    </button>
+                </div>
+                <div class="flows-list" id="flowsList">
+                    <!-- Akışlar buraya render edilecek -->
+                </div>
+                <div class="empty-state" id="emptyState">
+                    <div class="empty-icon">🤖</div>
+                    <p>Henüz bir akış yok</p>
+                    <p class="empty-hint">Yeni akış oluşturarak otomasyona başlayın!</p>
+                </div>
+            </div>
+
+            <!-- Flow Builder View -->
+            <div class="view hidden" id="builderView">
+                <div class="section-header">
+                    <button class="btn btn-ghost btn-sm" id="backBtn">← Geri</button>
+                    <h2 id="builderTitle">Yeni Akış</h2>
+                </div>
+
+                <!-- Flow Name -->
+                <div class="form-group">
+                    <input type="text" class="input" id="flowName" placeholder="Akış adı..." value="">
+                </div>
+
+                <!-- Block Palette -->
+                <div class="block-palette">
+                    <h3>Blok Ekle</h3>
+                    <div class="palette-grid" id="paletteGrid">
+                        <!-- Bloklar JS ile render edilecek -->
+                    </div>
+                </div>
+
+                <!-- Block List (flow steps) -->
+                <div class="block-list" id="blockList">
+                    <!-- Eklenen bloklar buraya -->
+                </div>
+
+                <div class="builder-empty" id="builderEmpty">
+                    <p>⬆ Yukarıdan blok ekleyerek akışı oluşturun</p>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="builder-actions">
+                    <button class="btn btn-success" id="saveFlowBtn">💾 Kaydet</button>
+                    <button class="btn btn-primary" id="runFlowBtn">▶ Çalıştır</button>
+                </div>
+            </div>
+        </main>
+
+        <!-- ===== Footer ===== -->
+        <footer class="footer">
+            <span>FlowMate v1.0</span>
+        </footer>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+
+</html>

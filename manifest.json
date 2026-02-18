@@ -1,0 +1,56 @@
+{
+    "manifest_version": 3,
+    "name": "ZhdsdAuto",
+    "version": "1.1.0",
+    "description": "Chrome tarayıcısında otomatik iş akışları oluşturun. Sürükle-bırak, görsel seçici ve sıfır kod.",
+    "permissions": [
+        "activeTab",
+        "scripting",
+        "storage",
+        "alarms",
+        "tabs"
+    ],
+    "host_permissions": [
+        "<all_urls>"
+    ],
+    "action": {
+        "default_icon": {
+            "16": "icons/icon16.png",
+            "48": "icons/icon48.png",
+            "128": "icons/icon128.png"
+        },
+        "default_title": "ZhdsdAuto'yu Aç"
+    },
+    "background": {
+        "service_worker": "background/service-worker.js",
+        "type": "module"
+    },
+    "icons": {
+        "16": "icons/icon16.png",
+        "48": "icons/icon48.png",
+        "128": "icons/icon128.png"
+    },
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "content/picker.css"
+            ],
+            "matches": [
+                "<all_urls>"
+            ]
+        }
+    ],
+    "content_scripts": [
+        {
+            "matches": [
+                "<all_urls>"
+            ],
+            "js": [
+                "content/overlay.js"
+            ],
+            "css": [
+                "content/overlay.css"
+            ]
+        }
+    ]
+}

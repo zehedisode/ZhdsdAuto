@@ -1,0 +1,226 @@
+/* ===== Block List (Builder) ===== */
+.block-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.block-item {
+    padding: 10px 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    animation: slideIn 0.25s ease-out;
+    position: relative;
+}
+
+.block-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    border-radius: 3px 0 0 3px;
+    background: var(--block-color, var(--accent));
+}
+
+.block-item-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.block-item-icon {
+    font-size: 14px;
+}
+
+.block-item-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-primary);
+    flex: 1;
+}
+
+.block-item-index {
+    font-size: 10px;
+    color: var(--text-muted);
+    background: var(--bg-input);
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-weight: 600;
+}
+
+.block-item-remove {
+    width: 22px;
+    height: 22px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: var(--transition);
+}
+
+.block-item-remove:hover {
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--danger);
+}
+
+.block-item-params {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-left: 26px;
+}
+
+.block-param {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.block-param-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    min-width: 60px;
+}
+
+.block-param .input {
+    flex: 1;
+}
+
+.block-param .selector-btn {
+    padding: 6px 10px;
+    background: var(--bg-input);
+    border: 1px dashed var(--border-accent);
+    border-radius: var(--radius-sm);
+    color: var(--accent-light);
+    font-family: inherit;
+    font-size: 11px;
+    cursor: pointer;
+    flex: 1;
+    text-align: left;
+    transition: var(--transition);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.block-param .selector-btn:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--accent);
+}
+
+.block-param .selector-btn.has-value {
+    color: var(--text-primary);
+    border-style: solid;
+    font-family: 'SF Mono', monospace;
+    font-size: 10px;
+}
+
+.block-param-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.block-param-checkbox input[type="checkbox"] {
+    accent-color: var(--accent);
+    width: 14px;
+    height: 14px;
+}
+
+.block-param-checkbox label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* ===== Builder Empty ===== */
+.builder-empty {
+    text-align: center;
+    padding: 24px;
+    color: var(--text-muted);
+    font-size: 12px;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-md);
+    margin-bottom: 12px;
+}
+
+/* ===== Builder Actions ===== */
+.builder-actions {
+    display: flex;
+    gap: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+}
+
+.builder-actions .btn {
+    flex: 1;
+    justify-content: center;
+    padding: 10px;
+}
+
+/* ===== Footer ===== */
+.footer {
+    padding: 8px 16px;
+    text-align: center;
+    font-size: 10px;
+    color: var(--text-muted);
+    border-top: 1px solid var(--border);
+}
+
+/* ===== Connector line between blocks ===== */
+.block-connector {
+    display: flex;
+    justify-content: center;
+    padding: 2px 0;
+    color: var(--text-muted);
+    font-size: 10px;
+    opacity: 0.4;
+}
+
+/* ===== Toast ===== */
+.toast {
+    position: fixed;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--bg-card);
+    color: var(--text-primary);
+    padding: 8px 16px;
+    border-radius: var(--radius-md);
+    font-size: 12px;
+    font-weight: 500;
+    border: 1px solid var(--border-accent);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    transition: all 0.3s ease;
+    z-index: 100;
+    pointer-events: none;
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}

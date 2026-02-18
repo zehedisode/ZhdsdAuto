@@ -1,0 +1,9 @@
+/* ===== FlowMate Dashboard — Modular Style Entry ===== */
+
+@import 'styles/variables.css';
+@import 'styles/base.css';
+@import 'styles/layout.css';
+@import 'styles/components.css';
+@import 'styles/builder.css';
+@import 'styles/panels.css';
+@import 'styles/animations.css';

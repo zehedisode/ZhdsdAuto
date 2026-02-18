@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZhdsdAuto</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="dashboard.css">
+    <link rel="stylesheet" href="styles/sidebar.css">
+    <link rel="stylesheet" href="styles/panels.css">
+    <link rel="stylesheet" href="styles/modal.css">
+    <link rel="icon" href="../icons/icon48.png">
+</head>
+
+<body>
+    <div class="app">
+        <!-- ===== Sidebar ===== -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <img src="../icons/icon48.png" alt="ZhdsdAuto" class="sidebar-logo">
+                <div>
+                    <h1 class="sidebar-title">ZhdsdAuto</h1>
+                    <span class="sidebar-subtitle">Version 1.1</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <button class="nav-item active" data-view="flows">
+                    <span class="nav-icon">📋</span>
+                    <span>Akışlarım</span>
+                </button>
+                <button class="nav-item" data-view="builder">
+                    <span class="nav-icon">🛠️</span>
+                    <span>Akış Oluştur</span>
+                </button>
+                <button class="nav-item" data-view="templates">
+                    <span class="nav-icon">📦</span>
+                    <span>Şablonlar</span>
+                </button>
+                <button class="nav-item" data-view="buttons">
+                    <span class="nav-icon">🔘</span>
+                    <span>Butonlar</span>
+                </button>
+                <button class="nav-item" data-view="backup">
+                    <span class="nav-icon">�</span>
+                    <span>Yedekleme</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="status-indicator" id="globalStatus">
+                    <span class="status-dot idle"></span>
+                    <span>Hazır</span>
+                </div>
+                <div class="sidebar-version">v1.1</div>
+            </div>
+        </aside>
+
+        <!-- ===== Main Content ===== -->
+        <main class="main-content">
+
+            <!-- ===== Flows List View ===== -->
+            <div class="view active" id="flowsView">
+                <div class="view-header">
+                    <div>
+                        <h2 class="view-title">Akışlarım</h2>
+                        <p class="view-desc">Kayıtlı otomasyon akışlarınız</p>
+                    </div>
+                    <button class="btn btn-primary" id="createFlowBtn">
+                        <span>＋</span> Yeni Akış Oluştur
+                    </button>
+                </div>
+
+                <div class="flows-grid" id="flowsGrid">
+                    <!-- Flows rendered here -->
+                </div>
+
+                <div class="empty-state" id="emptyState">
+                    <div class="empty-illustration">🤖</div>
+                    <h3>Henüz Akış Yok</h3>
+                    <p>Yeni akış oluşturarak tarayıcı otomasyonuna başlayın!</p>
+                    <button class="btn btn-primary btn-lg" id="emptyCreateBtn">
+                        <span>＋</span> İlk Akışımı Oluştur
+                    </button>
+                </div>
+            </div>
+
+            <!-- ===== Flow Builder View ===== -->
+            <div class="view" id="builderView">
+                <div class="view-header">
+                    <div class="builder-header-left">
+                        <button class="btn btn-ghost" id="backToFlows">← Geri</button>
+                        <input type="text" class="flow-name-input" id="flowNameInput" placeholder="Akış adını yazın...">
+                    </div>
+                    <div class="builder-header-right">
+                        <button class="btn btn-outline" id="toggleConsoleBtn">🖥️ Konsol</button>
+                        <button class="btn btn-outline" id="saveFlowBtn">💾 Kaydet</button>
+                        <button class="btn btn-success" id="runFlowBtn">▶ Çalıştır</button>
+                    </div>
+                </div>
+
+                <div class="builder-layout">
+                    <!-- Block Palette (Left) -->
+                    <div class="block-palette">
+                        <h3 class="palette-title">Bloklar</h3>
+
+                        <div class="palette-category">
+                            <h4 class="category-label">🖱️ Etkileşim</h4>
+                            <div class="palette-blocks" id="interactionBlocks"></div>
+                        </div>
+
+                        <div class="palette-category">
+                            <h4 class="category-label">🌐 Sayfa</h4>
+                            <div class="palette-blocks" id="pageBlocks"></div>
+                        </div>
+
+                        <div class="palette-category">
+                            <h4 class="category-label">📄 Veri</h4>
+                            <div class="palette-blocks" id="dataBlocks"></div>
+                        </div>
+
+                        <div class="palette-category">
+                            <h4 class="category-label">🔀 Mantık</h4>
+                            <div class="palette-blocks" id="logicBlocks"></div>
+                        </div>
+                    </div>
+
+                    <!-- Flow Canvas (Center) -->
+                    <div class="flow-canvas">
+                        <div class="canvas-content" id="canvasContent">
+                            <div class="canvas-empty" id="canvasEmpty">
+                                <div class="canvas-empty-icon">⬅</div>
+                                <p>Soldaki blok paletinden blok ekleyerek akışınızı oluşturun</p>
+                            </div>
+                            <div class="blocks-list" id="blocksList"></div>
+                        </div>
+
+                        <!-- Live Execution Console -->
+                        <div class="exec-console hidden" id="execConsole">
+                            <div class="exec-console-header">
+                                <span class="exec-console-title">🖥️ Çalışma Konsolu</span>
+                                <div class="exec-console-actions">
+                                    <button class="btn-sm-icon" id="clearConsoleBtn" title="Temizle">🗑️</button>
+                                    <button class="btn-sm-icon" id="closeConsoleBtn" title="Kapat">×</button>
+                                </div>
+                            </div>
+                            <div class="exec-console-body" id="execConsoleBody">
+                                <div class="exec-line info">Akışı çalıştırmak için ▶ Çalıştır butonuna tıklayın</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Block Config (Right) - shown when a block is selected -->
+                    <div class="block-config hidden" id="blockConfig">
+                        <div class="config-header">
+                            <h3 id="configTitle">Blok Ayarları</h3>
+                            <button class="btn-close" id="closeConfig">×</button>
+                        </div>
+                        <div class="config-body" id="configBody"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== Templates View ===== -->
+            <div class="view" id="templatesView">
+                <div class="view-header">
+                    <div>
+                        <h2 class="view-title">Şablonlar</h2>
+                        <p class="view-desc">Hazır otomasyon şablonları — tek tıkla kullanın</p>
+                    </div>
+                </div>
+                <div class="templates-grid" id="templatesGrid"></div>
+            </div>
+
+            <!-- ===== Buttons View ===== -->
+            <div class="view" id="buttonsView">
+                <div class="view-header">
+                    <div>
+                        <h2 class="view-title">Sayfa Butonları</h2>
+                        <p class="view-desc">Web sitelerine akış başlatıcı butonlar ekleyin</p>
+                    </div>
+                    <button class="btn btn-primary" id="createButtonBtn">
+                        <span>＋</span> Yeni Buton
+                    </button>
+                </div>
+
+                <div class="buttons-grid" id="buttonsGrid">
+                    <!-- Buttons list active here -->
+                </div>
+
+                <div class="empty-state" id="buttonsEmptyState">
+                    <div class="empty-illustration">🔘</div>
+                    <h3>Henüz Buton Yok</h3>
+                    <p>Sık kullandığınız akışlar için sayfa içi butonlar oluşturun.</p>
+                </div>
+            </div>
+
+            <!-- ===== Backup & Restore View ===== -->
+            <div class="view" id="backupView">
+                <div class="view-header">
+                    <div>
+                        <h2 class="view-title">Yedekleme & Geri Yükleme</h2>
+                        <p class="view-desc">İş akışlarınızı yedekleyin veya geri yükleyin</p>
+                    </div>
+                </div>
+
+                <div class="backup-container">
+                    <div class="backup-card">
+                        <div class="backup-icon">📥</div>
+                        <h3>Yedek Al (Backup)</h3>
+                        <p>Tüm iş akışlarınızı JSON formatında bilgisayarınıza indirin.</p>
+                        <button class="btn btn-primary" id="downloadBackupBtn">
+                            <span>⬇️</span> Yedek İndir
+                        </button>
+                    </div>
+
+                    <div class="backup-card">
+                        <div class="backup-icon">📤</div>
+                        <h3>Geri Yükle (Restore)</h3>
+                        <p>Daha önce aldığınız yedek dosyasını yükleyerek akışlarınızı geri getirin.</p>
+                        <p class="warning-text">⚠️ Bu işlem mevcut akışlarınızın üzerine yazacaktır!</p>
+                        <input type="file" id="restoreFileInput" accept=".json" style="display: none;">
+                        <button class="btn btn-outline" id="restoreBtn">
+                            <span>⬆️</span> Dosya Seç ve Yükle
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Status Banner (floating) -->
+    <div class="status-banner hidden" id="statusBanner">
+        <div class="status-banner-icon" id="bannerIcon">⚡</div>
+        <div class="status-banner-content">
+            <div class="status-banner-message" id="bannerMessage">Akış çalışıyor...</div>
+            <div class="status-banner-progress">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+        </div>
+        <button class="status-banner-stop" id="stopBtn" title="Durdur">■</button>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Button Modal: dashboard/modules/button-modal.js tarafından enjekte edilir -->
+
+    <script type="module" src="dashboard.js"></script>
+</body>
+
+</html>

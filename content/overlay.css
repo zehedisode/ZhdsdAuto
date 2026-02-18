@@ -1,0 +1,5 @@
+/* 
+ * Bu dosya artık kullanılmıyor. 
+ * Tüm stiller content/overlay.js içinde Shadow DOM içine enjekte ediliyor.
+ * Bu sayede sayfa stilleri ile çakışma (style bleeding) önleniyor.
+ */

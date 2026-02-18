@@ -281,10 +281,10 @@ export const BLOCK_TYPES = {
         id: 'loop',
         category: 'logic',
         icon: '🔁',
-        name: 'Döngü (Beta)',
+        name: 'Döngü',
         color: '#ef4444',
-        description: 'Blokları tekrar eder',
-        details: 'Henüz tam aktif değildir. İleride eklenecektir.',
+        description: 'Sonraki blokları N kez tekrarlar',
+        details: 'Döngüden sonraki blokları belirtilen sayıda tekrarlar.\n• _iteration değişkeni mevcut tekrar numarasını tutar (1\'den başlar).\n• Bir sonraki loop veya forEach bloğuna kadar olan bloklar tekrarlanır.',
         params: [
             { key: 'count', label: 'Tekrar Sayısı', type: 'number', default: 3 }
         ]
@@ -296,6 +296,7 @@ export const BLOCK_TYPES = {
         name: 'Her Biri İçin',
         color: '#8b5cf6',
         description: 'Listedeki her element için altındaki blokları çalıştırır',
+        details: 'Bir liste elementindeki her çocuk için sonraki blokları çalıştırır.\n• _index: mevcut element numarası (1\'den başlar)\n• _itemSelector: mevcut elementin CSS selector\'ı\n• Selector olarak *item kullanırsanız otomatik değiştirilir.',
         params: [
             { key: 'selector', label: 'Liste Elementi', type: 'selector', placeholder: 'Listeyi seç (ul, ol, div)', required: true },
             { key: 'childSelector', label: 'Çocuk Selector', type: 'text', placeholder: 'li, .item', default: 'li' }

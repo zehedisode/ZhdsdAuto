@@ -7,6 +7,8 @@ import { Storage } from './storage.js';
 import { showToast } from './utils.js';
 import { Renderer } from './ui-render.js';
 
+let lastPickerTabId = null;
+
 export async function runFlow(State, DOM, saveCurrentFlow) {
     if (!State.currentFlow || State.currentFlow.blocks.length === 0) {
         showToast('⚠️ Blok ekleyin', DOM);
@@ -79,6 +81,10 @@ export async function handlePicker(btn, key, State, DOM) {
     btn.classList.add('picking');
 
     chrome.runtime.sendMessage({ type: 'PICK_ELEMENT' }, (resp) => {
+        if (resp?.tabId) {
+            lastPickerTabId = resp.tabId;
+        }
+
         if (!resp?.success) {
             btn.textContent = originalText;
             btn.classList.remove('picking');
@@ -88,6 +94,10 @@ export async function handlePicker(btn, key, State, DOM) {
 
     const listener = (msg) => {
         if (msg.type === 'ELEMENT_PICKED') {
+            if (msg.tabId) {
+                lastPickerTabId = msg.tabId;
+            }
+
             State.getSelectedBlock().params[key] = msg.selector;
             // Update input directly without re-rendering everything (preserves accordion state)
             const activeInput = document.querySelector(`.block-item.selected .input[data-key="${key}"]`);
@@ -100,6 +110,15 @@ export async function handlePicker(btn, key, State, DOM) {
                 selectorBtn.classList.add('has-value');
             }
 
+            const testBtn = document.querySelector('.block-item.selected .read-text-test-btn');
+            if (testBtn) testBtn.disabled = false;
+
+            const testOutput = document.querySelector('.block-item.selected .read-text-test-output');
+            if (testOutput) {
+                testOutput.textContent = 'Seçim güncellendi. Test Et ile anlık metni görebilirsiniz.';
+                testOutput.classList.remove('success', 'error');
+            }
+
             btn.classList.remove('picking');
             chrome.runtime.onMessage.removeListener(listener);
         } else if (msg.type === 'PICKER_CANCELLED') {
@@ -109,4 +128,8 @@ export async function handlePicker(btn, key, State, DOM) {
         }
     };
     chrome.runtime.onMessage.addListener(listener);
+}
+
+export function getLastPickerTabId() {
+    return lastPickerTabId;
 }

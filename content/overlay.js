@@ -172,8 +172,7 @@
             b.className = 'zh-btn';
 
             // Konfigürasyon
-            const icon = btn.icon ? btn.icon + ' ' : '';
-            b.textContent = icon + (btn.label || flow.name);
+            b.textContent = btn.label || flow.name;
             b.title = btn.tooltip || flow.name;
 
             if (btn.size) b.classList.add(btn.size);
@@ -197,13 +196,6 @@
                 });
             };
 
-            // Auto Run
-            const arKey = `ar_${btn.id}`;
-            if (btn.autoRun && !sessionStorage.getItem(arKey)) {
-                sessionStorage.setItem(arKey, '1');
-                setTimeout(() => b.click(), 1000);
-            }
-
             wrapper.appendChild(b);
             container.appendChild(wrapper);
         });
@@ -218,6 +210,10 @@
         if (!isT && isL) return 'bottom-left';
         return 'bottom-right';
     }
+
+    chrome.storage.onChanged.addListener((changes) => {
+        if (changes.buttons || changes.flows) refresh();
+    });
 
     init();
 })();

@@ -23,14 +23,13 @@ export async function renderButtonsView(State, DOM) {
     DOM.buttonsGrid.innerHTML = buttons.map(btn => {
         const flow = flows.find(f => f.id === btn.flowId);
         const flowName = flow ? flow.name : 'Silinmiş Akış';
-        const icon = btn.icon || '';
         const sizeLabel = btn.size === 'sm' ? 'Küçük' : btn.size === 'lg' ? 'Büyük' : 'Normal';
 
         return `
         <div class="button-card">
             <div class="button-card-header">
-                <div class="button-card-preview" style="background-color: ${btn.style?.backgroundColor || '#3b82f6'}; border-radius: ${btn.style?.borderRadius || '8px'};">
-                    ${icon ? icon + ' ' : ''}${btn.label || flowName}
+                <div class="button-card-preview" style="background-color: ${btn.style?.backgroundColor || '#3b82f6'}; border-radius: 8px;">
+                    ${btn.label || flowName}
                 </div>
                 <button class="btn-sm-icon delete-btn" data-id="${btn.id}" title="Sil">×</button>
             </div>
@@ -40,7 +39,6 @@ export async function renderButtonsView(State, DOM) {
                 <div class="button-card-url" title="${btn.urlPattern}">🌐 ${btn.urlPattern}</div>
                 <div class="button-card-badges">
                     <span class="badge-tag">${sizeLabel}</span>
-                    ${btn.autoRun ? '<span class="badge-tag badge-warning">⚡ Otomatik</span>' : ''}
                     ${btn.pulse !== false ? '<span class="badge-tag badge-accent">✨ Animasyon</span>' : ''}
                 </div>
             </div>
@@ -90,21 +88,16 @@ export async function openButtonModal(existingButton = null, State, DOM) {
     DOM.btnUrl.value = '';
     DOM.btnLabel.value = '';
     DOM.btnTooltip.value = '';
-    DOM.btnRadius.value = 8;
-    DOM.radiusValue.textContent = '8px';
 
     // Reset Pickers
     DOM.colorPicker.querySelectorAll('.color-option').forEach(el => el.classList.remove('selected'));
     DOM.positionPicker.querySelectorAll('.pos-option').forEach(el => el.classList.remove('selected'));
-    DOM.iconPicker.querySelectorAll('.icon-option').forEach(el => el.classList.remove('selected'));
     DOM.sizePicker.querySelectorAll('.size-option').forEach(el => el.classList.remove('selected'));
 
     // Defaults
     DOM.colorPicker.children[0].classList.add('selected');
     DOM.positionPicker.querySelector('[data-pos="bottom-right"]').classList.add('selected');
-    DOM.iconPicker.children[0].classList.add('selected');
-    DOM.sizePicker.querySelector('[data-size="md"]').classList.add('selected');
-    DOM.autoRunSwitch.classList.remove('active');
+    DOM.sizePicker.querySelector('[data-size="sm"]').classList.add('selected');
     DOM.pulseSwitch.classList.add('active');
 
     // Fill Data if Editing
@@ -116,20 +109,11 @@ export async function openButtonModal(existingButton = null, State, DOM) {
         DOM.btnTooltip.value = existingButton.tooltip || '';
 
         // Set Color
-        const color = existingButton.style.backgroundColor;
+        const color = existingButton.style?.backgroundColor;
         const colorOpt = Array.from(DOM.colorPicker.children).find(el => el.dataset.color === color);
         if (colorOpt) {
             DOM.colorPicker.querySelector('.selected')?.classList.remove('selected');
             colorOpt.classList.add('selected');
-        }
-
-        // Set Icon
-        if (existingButton.icon !== undefined) {
-            const iconOpt = Array.from(DOM.iconPicker.children).find(el => el.dataset.icon === existingButton.icon);
-            if (iconOpt) {
-                DOM.iconPicker.querySelector('.selected')?.classList.remove('selected');
-                iconOpt.classList.add('selected');
-            }
         }
 
         // Set Size
@@ -141,22 +125,14 @@ export async function openButtonModal(existingButton = null, State, DOM) {
             }
         }
 
-        // Set Radius
-        if (existingButton.style.borderRadius) {
-            const r = parseInt(existingButton.style.borderRadius);
-            DOM.btnRadius.value = r;
-            DOM.radiusValue.textContent = r + 'px';
-        }
-
-        // Set Toggles
-        if (existingButton.autoRun) DOM.autoRunSwitch.classList.add('active');
+        // Set Pulse
         if (existingButton.pulse === false) DOM.pulseSwitch.classList.remove('active');
 
         // Set Position
         let pos = 'bottom-right';
-        if (existingButton.style.top && existingButton.style.left) pos = 'top-left';
-        if (existingButton.style.top && existingButton.style.right) pos = 'top-right';
-        if (existingButton.style.bottom && existingButton.style.left) pos = 'bottom-left';
+        if (existingButton.style?.top && existingButton.style?.left) pos = 'top-left';
+        if (existingButton.style?.top && existingButton.style?.right) pos = 'top-right';
+        if (existingButton.style?.bottom && existingButton.style?.left) pos = 'bottom-left';
 
         const posOpt = DOM.positionPicker.querySelector(`[data-pos="${pos}"]`);
         if (posOpt) {
@@ -190,10 +166,7 @@ export async function handleButtonFormSubmit(e, State, DOM) {
     // Get Style from Pickers
     const selectedColor = DOM.colorPicker.querySelector('.selected').dataset.color;
     const selectedPos = DOM.positionPicker.querySelector('.selected').dataset.pos;
-    const selectedIcon = DOM.iconPicker.querySelector('.selected')?.dataset.icon || '';
-    const selectedSize = DOM.sizePicker.querySelector('.selected')?.dataset.size || 'md';
-    const borderRadius = DOM.btnRadius.value + 'px';
-    const autoRun = DOM.autoRunSwitch.classList.contains('active');
+    const selectedSize = DOM.sizePicker.querySelector('.selected')?.dataset.size || 'sm';
     const pulse = DOM.pulseSwitch.classList.contains('active');
 
     let style = {
@@ -201,7 +174,7 @@ export async function handleButtonFormSubmit(e, State, DOM) {
         zIndex: 999999,
         backgroundColor: selectedColor,
         color: '#ffffff',
-        borderRadius: borderRadius,
+        borderRadius: '8px',
         // Reset all
         top: 'auto', bottom: 'auto', left: 'auto', right: 'auto'
     };
@@ -217,9 +190,7 @@ export async function handleButtonFormSubmit(e, State, DOM) {
         urlPattern,
         label,
         tooltip,
-        icon: selectedIcon,
         size: selectedSize,
-        autoRun,
         pulse,
         style
     };
@@ -249,16 +220,14 @@ export function updateLivePreview(DOM) {
     const label = DOM.btnLabel.value || 'Çalıştır';
     const selectedColor = DOM.colorPicker.querySelector('.selected')?.dataset.color || '#3b82f6';
     const selectedPos = DOM.positionPicker.querySelector('.selected')?.dataset.pos || 'bottom-right';
-    const selectedIcon = DOM.iconPicker.querySelector('.selected')?.dataset.icon || '';
-    const selectedSize = DOM.sizePicker.querySelector('.selected')?.dataset.size || 'md';
-    const radius = DOM.btnRadius.value + 'px';
+    const selectedSize = DOM.sizePicker.querySelector('.selected')?.dataset.size || 'sm';
 
     // Update text
-    previewBtn.textContent = (selectedIcon ? selectedIcon + ' ' : '') + label;
+    previewBtn.textContent = label;
 
     // Update style
     previewBtn.style.background = selectedColor;
-    previewBtn.style.borderRadius = radius;
+    previewBtn.style.borderRadius = '8px';
 
     // Size classes
     previewBtn.classList.remove('preview-sm', 'preview-lg');

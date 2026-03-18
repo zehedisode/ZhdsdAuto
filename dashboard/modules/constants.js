@@ -301,8 +301,31 @@ export const BLOCK_TYPES = {
             { key: 'selector', label: 'Liste Elementi', type: 'selector', placeholder: 'Listeyi seç (ul, ol, div)', required: true },
             { key: 'childSelector', label: 'Çocuk Selector', type: 'text', placeholder: 'li, .item', default: 'li' }
         ]
+    },
+
+    // UTILITY
+    addButton: {
+        id: 'addButton',
+        category: 'page',
+        icon: '🔘',
+        name: 'Buton Ekle',
+        color: '#10b981',
+        description: 'Sayfaya akış başlatıcı buton ekler',
+        details: 'Bu blok çalıştığında belirtilen sitelere otomatik bir buton eklenir. Buton bu akışı başlatır.\n• Hedef Site: Butonun hangi sayfalarda görüneceğini belirler (örn: canva.com).\n• Aynı akışa ait buton zaten varsa güncellenir.',
+        params: [
+            { key: 'flowId', label: 'Çalıştırılacak Akış', type: 'flow-select', required: true },
+            { key: 'urlPattern', label: 'Hedef Site (URL Filtresi)', type: 'text', required: true, placeholder: 'örn: canva.com' },
+            { key: 'label', label: 'Buton Metni', type: 'text', default: 'Çalıştır', placeholder: 'Çalıştır' },
+            { key: 'color', label: 'Renk', type: 'select', options: ['Mavi', 'Kırmızı', 'Yeşil', 'Sarı', 'İndigo', 'Mor', 'Pembe', 'Cyan', 'Siyah'], default: 'Mavi' },
+            { key: 'position', label: 'Konum', type: 'select', options: ['Sağ Alt', 'Sol Alt', 'Sağ Üst', 'Sol Üst'], default: 'Sağ Alt' },
+            { key: 'size', label: 'Boyut', type: 'select', options: ['Küçük', 'Normal', 'Büyük'], default: 'Küçük' },
+            { key: 'tooltip', label: 'Tooltip', type: 'text', placeholder: 'Otomasyon başlat...' },
+            { key: 'pulse', label: 'Animasyon (Pulse)', type: 'checkbox', default: true }
+        ]
     }
 };
+
+export const FLOW_SCHEMA_VERSION = 2;
 
 export const CATEGORIES = {
     interaction: { label: '🖱️ Etkileşim', containerId: 'interactionBlocks' },
@@ -311,90 +334,4 @@ export const CATEGORIES = {
     logic: { label: '🔀 Mantık', containerId: 'logicBlocks' }
 };
 
-export const TEMPLATES = [
-    {
-        id: 'google-search',
-        icon: '🔍',
-        name: 'Google Arama',
-        description: 'Google\'da arama yap ve sonuçları gör',
-        blocks: [
-            { type: 'navigate', params: { url: 'https://www.google.com' } },
-            { type: 'wait', params: { duration: 1000 } },
-            { type: 'type', params: { selector: 'textarea[name="q"]', text: 'ZhdsdAuto otomasyon', clear: true } },
-            { type: 'keyboard', params: { key: 'Enter', modifier: 'yok' } },
-            { type: 'wait', params: { duration: 2000 } }
-        ],
-        blockCount: 5
-    },
-    {
-        id: 'youtube-search',
-        icon: '🎬',
-        name: 'YouTube Video Ara',
-        description: 'YouTube\'da video arayın',
-        blocks: [
-            { type: 'navigate', params: { url: 'https://www.youtube.com' } },
-            { type: 'wait', params: { duration: 2000 } },
-            { type: 'type', params: { selector: 'input#search', text: 'otomasyon tutorial', clear: true } },
-            { type: 'click', params: { selector: 'button#search-icon-legacy' } },
-            { type: 'wait', params: { duration: 2000 } }
-        ],
-        blockCount: 5
-    },
-    {
-        id: 'page-scroll',
-        icon: '📜',
-        name: 'Sayfa Tarama',
-        description: 'Bir sayfayı otomatik olarak aşağı kaydır',
-        blocks: [
-            { type: 'navigate', params: { url: 'https://example.com' } },
-            { type: 'wait', params: { duration: 1000 } },
-            { type: 'scroll', params: { direction: 'aşağı', amount: 500 } },
-            { type: 'wait', params: { duration: 1000 } },
-            { type: 'scroll', params: { direction: 'aşağı', amount: 500 } },
-            { type: 'wait', params: { duration: 1000 } },
-            { type: 'scroll', params: { direction: 'en üst', amount: 0 } }
-        ],
-        blockCount: 7
-    },
-    {
-        id: 'form-fill',
-        icon: '📝',
-        name: 'Form Doldur',
-        description: 'Bir formu otomatik olarak doldurun',
-        blocks: [
-            { type: 'navigate', params: { url: 'https://example.com/form' } },
-            { type: 'wait', params: { duration: 1000 } },
-            { type: 'type', params: { selector: 'input[name="name"]', text: 'Ad Soyad', clear: true } },
-            { type: 'type', params: { selector: 'input[name="email"]', text: 'ornek@email.com', clear: true } },
-            { type: 'click', params: { selector: 'button[type="submit"]' } }
-        ],
-        blockCount: 5
-    },
-    {
-        id: 'data-scrape',
-        icon: '📊',
-        name: 'Veri Çekme',
-        description: 'Bir sayfadan metin verilerini çekin',
-        blocks: [
-            { type: 'navigate', params: { url: 'https://example.com' } },
-            { type: 'wait', params: { duration: 1500 } },
-            { type: 'readText', params: { selector: 'h1', variable: 'baslik' } },
-            { type: 'readText', params: { selector: 'p', variable: 'paragraf' } }
-        ],
-        blockCount: 4
-    },
-    {
-        id: 'multi-tab',
-        icon: '📑',
-        name: 'Çoklu Sekme',
-        description: 'Birden fazla sayfayı aynı anda açın',
-        blocks: [
-            { type: 'newTab', params: { url: 'https://www.google.com' } },
-            { type: 'wait', params: { duration: 1000 } },
-            { type: 'newTab', params: { url: 'https://www.youtube.com' } },
-            { type: 'wait', params: { duration: 1000 } },
-            { type: 'newTab', params: { url: 'https://github.com' } }
-        ],
-        blockCount: 5
-    }
-];
+

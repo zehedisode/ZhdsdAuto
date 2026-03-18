@@ -1,23 +1,24 @@
 /** 🌊 ZhdsdAuto Dashboard Controller (UI Orchestrator) */
 
-import { BLOCK_TYPES, CATEGORIES, TEMPLATES } from './modules/constants.js';
-import { generateId, showToast } from './modules/utils.js';
+import { BLOCK_TYPES, CATEGORIES, FLOW_SCHEMA_VERSION } from './modules/constants.js';
+import { generateId, showToast, escapeHTML } from './modules/utils.js';
+import { validateFlow } from './modules/block-helpers.js';
 import { Storage } from './modules/storage.js';
 import { State } from './modules/state.js';
 import { Renderer, getParamSummary } from './modules/ui-render.js';
 import { setupDragAndDrop } from './modules/drag-drop.js';
-import { runFlow, handleMessage, handlePicker } from './modules/execution.js';
-import { handleBackupDownload, handleRestoreFileChange } from './modules/backup.js';
-import { renderButtonsView, openButtonModal, closeButtonModal, handleButtonFormSubmit, updateLivePreview } from './modules/page-buttons.js';
+import { runFlow, handleMessage, handlePicker, getLastPickerTabId } from './modules/execution.js';
 import { cacheDOMRefs } from './modules/dom-refs.js';
-import { injectButtonModal } from './modules/button-modal.js';
 import { cloneBlock, setupContextMenu, setupKeyboardShortcuts } from './modules/shortcuts.js';
+import { handleBackupDownload, handleRestoreFileChange } from './modules/backup.js';
 
 // DOM Referansları
 let DOM = {};
 
+let savedFlowSnapshot = '';
+let isFlowDirty = false;
+
 document.addEventListener('DOMContentLoaded', async () => {
-    injectButtonModal();
     DOM = cacheDOMRefs();
     setupGlobalEvents();
 
@@ -27,7 +28,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // View Başlat
     renderPalette();
-    renderTemplatesList();
     renderFlowsView();
     chrome.runtime.onMessage.addListener((msg) => handleMessage(msg, State, DOM));
 });
@@ -44,67 +44,33 @@ function setupGlobalEvents() {
     DOM.backToFlows.onclick = () => switchView('flows');
     DOM.stopBtn.onclick = () => chrome.runtime.sendMessage({ type: 'STOP_FLOW' });
 
+    DOM.flowNameInput.oninput = () => refreshDirtyState();
+    DOM.blockSearchInput.oninput = () => renderPalette();
+    DOM.blockSearchInput.onkeydown = (e) => {
+        if (e.key === 'Enter') {
+            const firstVisible = document.querySelector('.palette-block');
+            if (firstVisible) firstVisible.click();
+        }
+    };
+
+    window.addEventListener('beforeunload', (e) => {
+        if (hasUnsavedChanges()) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
+
+    // Backup / Restore
+    DOM.backupDownloadBtn.onclick = () => handleBackupDownload(State, DOM);
+    DOM.restoreTriggerBtn.onclick = () => DOM.restoreFileInput.click();
+    DOM.restoreFileInput.onchange = (e) => handleRestoreFileChange(e, State, DOM, renderFlowsView);
+
     // Konsol
     DOM.toggleConsoleBtn.onclick = toggleConsole;
     DOM.clearConsoleBtn.onclick = () => DOM.execConsoleBody.innerHTML = '';
     DOM.closeConsoleBtn.onclick = () => {
         DOM.execConsole.classList.add('hidden');
         DOM.toggleConsoleBtn.classList.remove('active');
-    };
-
-    // Backup & Restore
-    DOM.downloadBackupBtn.onclick = () => handleBackupDownload(State, DOM);
-    DOM.restoreBtn.onclick = () => DOM.restoreFileInput.click();
-    DOM.restoreFileInput.onchange = (e) => handleRestoreFileChange(e, State, DOM, renderFlowsView);
-
-    // Page Buttons
-    DOM.createButtonBtn.onclick = () => openButtonModal(null, State, DOM);
-
-    // Modal Events
-    DOM.closeButtonModal.onclick = () => closeButtonModal(DOM);
-    DOM.cancelButtonModal.onclick = () => closeButtonModal(DOM);
-    DOM.buttonForm.onsubmit = (e) => handleButtonFormSubmit(e, State, DOM);
-
-    // Color Picker
-    DOM.colorPicker.querySelectorAll('.color-option').forEach(opt => {
-        opt.onclick = () => {
-            DOM.colorPicker.querySelectorAll('.color-option').forEach(el => el.classList.remove('selected'));
-            opt.classList.add('selected');
-            updateLivePreview(DOM);
-        };
-    });
-
-    // Position Picker
-    DOM.positionPicker.querySelectorAll('.pos-option').forEach(opt => {
-        opt.onclick = () => {
-            DOM.positionPicker.querySelectorAll('.pos-option').forEach(el => el.classList.remove('selected'));
-            opt.classList.add('selected');
-            updateLivePreview(DOM);
-        };
-    });
-
-    // Icon Picker
-    DOM.iconPicker.querySelectorAll('.icon-option').forEach(opt => {
-        opt.onclick = () => {
-            DOM.iconPicker.querySelectorAll('.icon-option').forEach(el => el.classList.remove('selected'));
-            opt.classList.add('selected');
-            updateLivePreview(DOM);
-        };
-    });
-
-    // Size Picker
-    DOM.sizePicker.querySelectorAll('.size-option').forEach(opt => {
-        opt.onclick = () => {
-            DOM.sizePicker.querySelectorAll('.size-option').forEach(el => el.classList.remove('selected'));
-            opt.classList.add('selected');
-            updateLivePreview(DOM);
-        };
-    });
-
-    // Radius Slider
-    DOM.btnRadius.oninput = () => {
-        DOM.radiusValue.textContent = DOM.btnRadius.value + 'px';
-        updateLivePreview(DOM);
     };
 
     // Keyboard Shortcuts
@@ -116,46 +82,90 @@ function setupGlobalEvents() {
         onEscape: closeConfig,
         getSelectedBlockId: () => State.selectedBlockId
     });
-
-    DOM.autoRunToggle.onclick = () => DOM.autoRunSwitch.classList.toggle('active');
-    DOM.pulseToggle.onclick = () => DOM.pulseSwitch.classList.toggle('active');
-
-    // Live Preview Inputs
-    DOM.btnLabel.addEventListener('input', () => updateLivePreview(DOM));
 }
 
 // VIEW LOGIC
+function getActiveViewId() {
+    const active = document.querySelector('.view.active');
+    return active ? active.id.replace('View', '') : null;
+}
+
+function captureCurrentDraftSnapshot() {
+    if (!State.currentFlow) return '';
+
+    const draft = JSON.parse(JSON.stringify(State.currentFlow));
+    draft.name = (DOM.flowNameInput?.value || draft.name || '').trim() || 'İsimsiz Akış';
+    return JSON.stringify(draft);
+}
+
+function setSavedSnapshotFromCurrent() {
+    savedFlowSnapshot = captureCurrentDraftSnapshot();
+    isFlowDirty = false;
+    updateUnsavedBadge();
+}
+
+function updateUnsavedBadge() {
+    if (!DOM.unsavedBadge) return;
+    DOM.unsavedBadge.classList.toggle('hidden', !isFlowDirty);
+}
+
+function refreshDirtyState() {
+    if (!State.currentFlow) {
+        isFlowDirty = false;
+        updateUnsavedBadge();
+        return;
+    }
+
+    isFlowDirty = captureCurrentDraftSnapshot() !== savedFlowSnapshot;
+    updateUnsavedBadge();
+}
+
+function hasUnsavedChanges() {
+    refreshDirtyState();
+    return isFlowDirty;
+}
+
 function switchView(viewId) {
+    const activeViewId = getActiveViewId();
+
+    if (activeViewId === 'builder' && viewId !== 'builder' && hasUnsavedChanges()) {
+        const ok = confirm('Kaydedilmemiş değişiklikler var. Kaydetmeden çıkmak istiyor musunuz?');
+        if (!ok) return;
+    }
+
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById(viewId + 'View').classList.add('active');
     DOM.navItems.forEach(item => item.classList.toggle('active', item.dataset.view === viewId));
 
     if (viewId === 'flows') renderFlowsView();
-    if (viewId === 'buttons') renderButtonsView(State, DOM);
 }
 
 // RENDERERS
 function renderFlowsView() {
-    Renderer.renderFlowsList(State.flows, DOM.flowsGrid, (id) => {
-        // Edit Action
-        const flow = State.flows.find(f => String(f.id) === String(id));
-        if (flow) {
-            State.setCurrentFlow(flow);
-            openBuilder();
+    Renderer.renderFlowsList(
+        State.flows,
+        DOM.flowsGrid,
+        (id) => {
+            const flow = State.flows.find(f => String(f.id) === String(id));
+            if (flow) {
+                State.setCurrentFlow(flow);
+                openBuilder();
+            }
+        },
+        async (e, id) => {
+            if (e && e.stopPropagation) e.stopPropagation();
+            if (confirm('Bu akışı silmek istiyor musunuz?')) {
+                const newFlows = await Storage.deleteFlow(id);
+                State.setFlows(newFlows);
+                renderFlowsView();
+                showToast('🗑️ Akış silindi', DOM);
+            }
+        },
+        async (id) => {
+            await duplicateFlow(id);
         }
-    }, async (e, id) => {
-        // Delete Action
-        if (e && e.stopPropagation) e.stopPropagation();
+    );
 
-        if (confirm('Bu akışı silmek istiyor musunuz?')) {
-            const newFlows = await Storage.deleteFlow(id);
-            State.setFlows(newFlows);
-            renderFlowsView();
-            showToast('🗑️ Akış silindi', DOM);
-        }
-    });
-
-    // Boş durum kontrolü
     if (State.flows.length === 0) {
         DOM.flowsGrid.classList.add('hidden');
         DOM.emptyState.classList.remove('hidden');
@@ -166,11 +176,31 @@ function renderFlowsView() {
 }
 
 function renderPalette() {
+    const search = (DOM.blockSearchInput?.value || '').trim().toLowerCase();
+
     Object.entries(CATEGORIES).forEach(([catId, cat]) => {
         const container = document.getElementById(cat.containerId);
         if (!container) return;
 
-        const blocks = Object.values(BLOCK_TYPES).filter(b => b.category === catId);
+        const categoryEl = container.closest('.palette-category');
+        const blocks = Object.values(BLOCK_TYPES)
+            .filter(b => b.category === catId)
+            .filter(b => {
+                if (!search) return true;
+
+                const haystack = [
+                    b.name,
+                    b.description,
+                    ...(Array.isArray(b.params) ? b.params.map(p => p.label) : [])
+                ].join(' ').toLowerCase();
+
+                return haystack.includes(search);
+            });
+
+        if (categoryEl) {
+            categoryEl.classList.toggle('hidden', !!search && blocks.length === 0);
+        }
+
         container.innerHTML = blocks.map(b => `
             <div class="palette-block" data-type="${b.id}" title="${b.description}">
                 <span class="palette-block-icon">${b.icon}</span>
@@ -183,7 +213,6 @@ function renderPalette() {
         });
     });
 
-    // Accordion Logic (Sol Menü)
     document.querySelectorAll('.palette-category').forEach(cat => {
         const title = cat.querySelector('.category-label');
         if (title) {
@@ -192,28 +221,11 @@ function renderPalette() {
     });
 }
 
-function renderTemplatesList() {
-    DOM.templatesGrid.innerHTML = TEMPLATES.map(t => `
-        <div class="template-card" data-template="${t.id}">
-            <div class="template-card-icon">${t.icon}</div>
-            <div class="template-card-title">${t.name}</div>
-            <div class="template-card-desc">${t.description}</div>
-            <div class="template-card-meta"><span>📦 ${t.blockCount} adım</span></div>
-        </div>
-    `).join('');
-
-    DOM.templatesGrid.querySelectorAll('.template-card').forEach(card => {
-        card.onclick = () => loadTemplate(card.dataset.template);
-    });
-}
-
 function renderBuilder() {
     DOM.flowNameInput.value = State.currentFlow.name;
+    const prevSelectedId = State.selectedBlockId;
 
-    // Blokları Render Et
     Renderer.renderBlocks(State.currentFlow, State.selectedBlockId, DOM.blocksList, (container) => {
-        // Event Delegation for Blocks
-
         // 1. Select
         container.querySelectorAll('.block-item').forEach(el => {
             el.onclick = (e) => {
@@ -233,7 +245,15 @@ function renderBuilder() {
             };
         });
 
-        // 3. Move Up/Down
+        // 3. Clone
+        container.querySelectorAll('.block-item-clone').forEach(btn => {
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                handleCloneBlock(btn.dataset.id);
+            };
+        });
+
+        // 4. Move Up/Down
         container.querySelectorAll('.block-move-btn').forEach(btn => {
             btn.onclick = (e) => {
                 e.stopPropagation();
@@ -243,10 +263,10 @@ function renderBuilder() {
             };
         });
 
-        // 4. Drag & Drop Logic
+        // 5. Drag & Drop Logic
         setupDragAndDrop(container, State, renderBuilder);
 
-        // 5. Context Menu (Sağ Tık)
+        // 6. Context Menu (Sağ Tık)
         setupContextMenu(container, {
             onClone: handleCloneBlock,
             onDelete: removeBlock,
@@ -254,6 +274,13 @@ function renderBuilder() {
             onMoveDown: moveBlock
         });
     });
+
+    if (prevSelectedId && State.currentFlow.blocks.some(b => String(b.id) === String(prevSelectedId))) {
+        State.selectBlock(null);
+        selectBlock(prevSelectedId);
+    }
+
+    refreshDirtyState();
 }
 
 // ACTIONS
@@ -261,6 +288,7 @@ function createNewFlow() {
     const newFlow = {
         id: generateId(),
         name: 'Yeni Akış',
+        schemaVersion: FLOW_SCHEMA_VERSION,
         createdAt: Date.now(),
         blocks: []
     };
@@ -271,6 +299,7 @@ function createNewFlow() {
 function openBuilder() {
     switchView('builder');
     renderBuilder();
+    setSavedSnapshotFromCurrent();
 }
 
 function addBlock(type) {
@@ -283,14 +312,18 @@ function addBlock(type) {
         params: {}
     };
 
-    // Varsayılanları ata
     typeDef.params.forEach(p => {
         if (p.default !== undefined) newBlock.params[p.key] = p.default;
     });
 
+    if (type === 'addButton') {
+        newBlock.params.flowId = State.currentFlow.id;
+    }
+
     State.currentFlow.blocks.push(newBlock);
     renderBuilder();
     selectBlock(newBlock.id);
+    refreshDirtyState();
 }
 
 function removeBlock(blockId) {
@@ -299,6 +332,7 @@ function removeBlock(blockId) {
         State.selectBlock(null);
     }
     renderBuilder();
+    refreshDirtyState();
 }
 
 function handleCloneBlock(blockId) {
@@ -306,69 +340,211 @@ function handleCloneBlock(blockId) {
     if (clone) {
         renderBuilder();
         selectBlock(clone.id);
+        refreshDirtyState();
         showToast('📋 Blok klonlandı', DOM);
     }
 }
 
-function selectBlock(blockId) {
-    // Zaten seçili bloğa tekrar tıklandıysa re-render yapma (input focus korunur)
-    if (String(State.selectedBlockId) === String(blockId)) return;
+function getNextDuplicateName(baseName) {
+    const normalizedBase = (baseName || 'İsimsiz Akış').trim();
+    const escaped = normalizedBase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(`^${escaped} \\(Kopya(?: (\\d+))?\\)$`);
 
-    // 1. Durumu güncelle
+    let hasPlainCopy = false;
+    let maxSuffix = 1;
+
+    State.flows.forEach(flow => {
+        if (flow.name === `${normalizedBase} (Kopya)`) {
+            hasPlainCopy = true;
+            return;
+        }
+
+        const m = String(flow.name || '').match(re);
+        if (m && m[1]) {
+            const num = parseInt(m[1], 10);
+            if (Number.isFinite(num)) {
+                maxSuffix = Math.max(maxSuffix, num);
+            }
+        }
+    });
+
+    if (!hasPlainCopy) return `${normalizedBase} (Kopya)`;
+    return `${normalizedBase} (Kopya ${maxSuffix + 1})`;
+}
+
+async function duplicateFlow(id) {
+    const flow = State.flows.find(f => String(f.id) === String(id));
+    if (!flow) return;
+
+    const copy = {
+        id: generateId(),
+        name: getNextDuplicateName(flow.name),
+        schemaVersion: FLOW_SCHEMA_VERSION,
+        createdAt: Date.now(),
+        blocks: JSON.parse(JSON.stringify(flow.blocks)).map(b => ({ ...b, id: generateId() }))
+    };
+
+    const flows = await Storage.saveFlow(copy);
+    State.setFlows(flows);
+    State.setCurrentFlow(copy);
+    renderFlowsView();
+    openBuilder();
+    showToast('📋 Akış kopyalandı ve açıldı', DOM);
+}
+
+function selectBlock(blockId) {
+    if (String(State.selectedBlockId) === String(blockId)) {
+        closeConfig();
+        return;
+    }
+
     State.selectBlock(blockId);
 
-    // 2. UI'da sadece seçili bloğu işaretle (Active class)
     document.querySelectorAll('.block-item').forEach(el => {
         const isTarget = String(el.dataset.blockId) === String(blockId);
         el.classList.toggle('selected', isTarget);
 
-        // Inline config alanını bul
+        const toggleArrow = el.querySelector('.block-toggle-arrow');
+        if (toggleArrow) toggleArrow.classList.toggle('open', isTarget);
+
         const configArea = el.querySelector('.block-config-inline');
 
         if (isTarget) {
-            // AÇ: Config render et
             configArea.classList.remove('hidden');
             const block = State.getSelectedBlock();
 
-            // Render Config Inside Block
             Renderer.renderConfig(block, configArea, (key, value) => {
                 block.params[key] = value;
                 const summary = getParamSummary(block);
                 const descEl = el.querySelector('.block-item-desc');
                 if (descEl) descEl.textContent = summary || '';
+                refreshDirtyState();
+            }, (btn, key) => handlePicker(btn, key, State, DOM), (targetBlock, testBtn, outputEl) => {
+                testReadTextBlock(targetBlock, testBtn, outputEl);
+            });
 
-            }, (btn, key) => handlePicker(btn, key, State, DOM));
+            const flowSelectEls = configArea.querySelectorAll('[data-flow-select]');
+            if (flowSelectEls.length > 0) {
+                Storage.getFlows().then(flows => {
+                    flowSelectEls.forEach(sel => {
+                        const current = sel.dataset.current;
+                        sel.innerHTML = '<option value="" disabled>Akış seçin...</option>' +
+                            flows.map(f => `<option value="${escapeHTML(f.id)}" ${f.id === current ? 'selected' : ''}>${escapeHTML(f.name)}</option>`).join('');
+                        if (sel.value) {
+                            block.params[sel.dataset.key] = sel.value;
+                        }
+                    });
+                });
+            }
 
         } else {
-            // KAPAT
             configArea.classList.add('hidden');
-            configArea.innerHTML = ''; // Temizle
+            configArea.innerHTML = '';
         }
     });
+}
+
+function clearFlowValidationUI() {
+    DOM.flowNameInput.classList.remove('input-error');
+    DOM.flowNameInput.title = '';
+    document.querySelectorAll('.block-item').forEach(el => {
+        el.classList.remove('validation-error');
+        el.removeAttribute('title');
+    });
+}
+
+function applyFlowValidationUI(errors) {
+    clearFlowValidationUI();
+
+    if (!Array.isArray(errors) || errors.length === 0) return;
+
+    const nameError = errors.find(e => e.type === 'flowName');
+    if (nameError) {
+        DOM.flowNameInput.classList.add('input-error');
+        DOM.flowNameInput.title = nameError.message;
+    }
+
+    errors
+        .filter(e => e.type === 'block' && e.blockId)
+        .forEach(err => {
+            const el = document.querySelector(`.block-item[data-block-id="${err.blockId}"]`);
+            if (el) {
+                el.classList.add('validation-error');
+                el.title = err.message;
+            }
+        });
 }
 
 async function saveCurrentFlow() {
     if (!State.currentFlow) return;
     State.currentFlow.name = DOM.flowNameInput.value.trim() || 'İsimsiz Akış';
+    State.currentFlow.schemaVersion = FLOW_SCHEMA_VERSION;
+
+    const validation = validateFlow(State.currentFlow);
+    if (!validation.valid) {
+        renderBuilder();
+        applyFlowValidationUI(validation.errors);
+        showToast(`❌ Akış kaydedilemedi: ${validation.errors[0].message}`, DOM);
+        return;
+    }
+
+    clearFlowValidationUI();
 
     const flows = await Storage.saveFlow(State.currentFlow);
     State.setFlows(flows);
+    await syncFlowButtons(State.currentFlow);
+    setSavedSnapshotFromCurrent();
     showToast('✅ Akış kaydedildi', DOM);
 }
 
-function loadTemplate(templateId) {
-    const template = TEMPLATES.find(t => t.id === templateId);
-    if (!template) return;
-
-    const newFlow = {
-        id: generateId(),
-        name: template.name,
-        createdAt: Date.now(),
-        blocks: JSON.parse(JSON.stringify(template.blocks)).map(b => ({ ...b, id: generateId() }))
+async function syncFlowButtons(flow) {
+    const COLOR_MAP = {
+        'Mavi': '#3b82f6', 'Kırmızı': '#ef4444', 'Yeşil': '#10b981',
+        'Sarı': '#f59e0b', 'İndigo': '#6366f1', 'Mor': '#8b5cf6',
+        'Pembe': '#ec4899', 'Cyan': '#06b6d4', 'Siyah': '#000000'
     };
-    State.setCurrentFlow(newFlow);
-    openBuilder();
-    showToast(`🎨 ${template.name} yüklendi`, DOM);
+    const POS_MAP = {
+        'Sağ Alt': 'bottom-right', 'Sol Alt': 'bottom-left',
+        'Sağ Üst': 'top-right', 'Sol Üst': 'top-left'
+    };
+    const SIZE_MAP = { 'Küçük': 'sm', 'Normal': 'md', 'Büyük': 'lg' };
+
+    let buttons = await Storage.getButtons();
+    buttons = buttons.filter(b => !String(b.id).startsWith(`btn_block_${flow.id}_`));
+
+    flow.blocks.filter(b => b.type === 'addButton').forEach(block => {
+        const p = block.params;
+        const resolvedFlowId = p.flowId || flow.id;
+        if (!p.urlPattern) return;
+
+        const bgColor = COLOR_MAP[p.color] || '#3b82f6';
+        const pos = POS_MAP[p.position] || 'bottom-right';
+        const size = SIZE_MAP[p.size] || 'sm';
+
+        const style = {
+            position: 'fixed', zIndex: 999999,
+            backgroundColor: bgColor, color: '#ffffff',
+            borderRadius: '8px',
+            top: 'auto', bottom: 'auto', left: 'auto', right: 'auto'
+        };
+        if (pos === 'top-left') { style.top = '20px'; style.left = '20px'; }
+        if (pos === 'top-right') { style.top = '20px'; style.right = '20px'; }
+        if (pos === 'bottom-left') { style.bottom = '20px'; style.left = '20px'; }
+        if (pos === 'bottom-right') { style.bottom = '20px'; style.right = '20px'; }
+
+        buttons.push({
+            id: `btn_block_${flow.id}_${block.id}`,
+            flowId: resolvedFlowId,
+            urlPattern: p.urlPattern,
+            label: p.label || 'Çalıştır',
+            tooltip: p.tooltip || '',
+            size,
+            pulse: p.pulse !== false && p.pulse !== 'false',
+            style
+        });
+    });
+
+    await Storage.saveButtons(buttons);
 }
 
 function moveBlock(id, dir) {
@@ -380,13 +556,54 @@ function moveBlock(id, dir) {
     if (newIdx >= 0 && newIdx < blocks.length) {
         [blocks[idx], blocks[newIdx]] = [blocks[newIdx], blocks[idx]];
         renderBuilder();
+        refreshDirtyState();
     }
 }
 
 function closeConfig() {
     State.selectBlock(null);
     document.querySelectorAll('.block-config-inline').forEach(el => { el.classList.add('hidden'); el.innerHTML = ''; });
-    document.querySelectorAll('.block-item').forEach(el => el.classList.remove('selected'));
+    document.querySelectorAll('.block-item').forEach(el => {
+        el.classList.remove('selected');
+        const arrow = el.querySelector('.block-toggle-arrow');
+        if (arrow) arrow.classList.remove('open');
+    });
+}
+
+async function testReadTextBlock(block, testBtn, outputEl) {
+    const selector = (block?.params?.selector || '').trim();
+    if (!selector || !testBtn || !outputEl) return;
+
+    const originalText = testBtn.textContent;
+    testBtn.disabled = true;
+    testBtn.textContent = 'Test ediliyor...';
+    outputEl.textContent = 'Metin okunuyor...';
+    outputEl.classList.remove('success', 'error');
+
+    try {
+        const response = await chrome.runtime.sendMessage({
+            type: 'TEST_READ_TEXT',
+            selector,
+            wordIndex: block?.params?.wordIndex || '',
+            tabId: getLastPickerTabId()
+        });
+
+        if (!response?.success) {
+            outputEl.textContent = response?.error || 'Metin okunamadı';
+            outputEl.classList.add('error');
+            return;
+        }
+
+        const text = response.data || '(boş metin)';
+        outputEl.textContent = `Çekilen metin: ${text}`;
+        outputEl.classList.add('success');
+    } catch (error) {
+        outputEl.textContent = `Hata: ${error.message}`;
+        outputEl.classList.add('error');
+    } finally {
+        testBtn.disabled = false;
+        testBtn.textContent = originalText;
+    }
 }
 
 function toggleConsole() {

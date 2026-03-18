@@ -184,6 +184,56 @@ class FlowEngine {
             case 'readTable':
                 return await execInContent(this, tabId, block.type.toUpperCase(), p);
 
+            case 'addButton': {
+                const COLOR_MAP = {
+                    'Mavi': '#3b82f6', 'Kırmızı': '#ef4444', 'Yeşil': '#10b981',
+                    'Sarı': '#f59e0b', 'İndigo': '#6366f1', 'Mor': '#8b5cf6',
+                    'Pembe': '#ec4899', 'Cyan': '#06b6d4', 'Siyah': '#000000'
+                };
+                const POS_MAP = {
+                    'Sağ Alt': 'bottom-right', 'Sol Alt': 'bottom-left',
+                    'Sağ Üst': 'top-right', 'Sol Üst': 'top-left'
+                };
+                const SIZE_MAP = { 'Küçük': 'sm', 'Normal': 'md', 'Büyük': 'lg' };
+
+                const bgColor = COLOR_MAP[p.color] || '#3b82f6';
+                const pos = POS_MAP[p.position] || 'bottom-right';
+                const size = SIZE_MAP[p.size] || 'sm';
+
+                const style = {
+                    position: 'fixed', zIndex: 999999,
+                    backgroundColor: bgColor, color: '#ffffff',
+                    borderRadius: '8px',
+                    top: 'auto', bottom: 'auto', left: 'auto', right: 'auto'
+                };
+                if (pos === 'top-left') { style.top = '20px'; style.left = '20px'; }
+                if (pos === 'top-right') { style.top = '20px'; style.right = '20px'; }
+                if (pos === 'bottom-left') { style.bottom = '20px'; style.left = '20px'; }
+                if (pos === 'bottom-right') { style.bottom = '20px'; style.right = '20px'; }
+
+                const newButton = {
+                    id: `btn_block_${this.flow.id}_${block.id}`,
+                    flowId: p.flowId || this.flow.id,
+                    urlPattern: p.urlPattern || '',
+                    label: p.label || 'Çalıştır',
+                    tooltip: p.tooltip || '',
+                    size,
+                    pulse: p.pulse !== false && p.pulse !== 'false',
+                    style
+                };
+
+                const data = await chrome.storage.local.get('buttons');
+                const buttons = data.buttons || [];
+                const existingIdx = buttons.findIndex(b => b.id === newButton.id);
+                if (existingIdx > -1) {
+                    buttons[existingIdx] = newButton;
+                } else {
+                    buttons.push(newButton);
+                }
+                await chrome.storage.local.set({ buttons });
+                return tabId;
+            }
+
             // condition, loop ve forEach run() içinde handle edilir
 
             default:

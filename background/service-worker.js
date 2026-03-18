@@ -51,8 +51,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         case 'PICK_ELEMENT':
             handlePickElement(sendResponse);
             return true;
+        case 'TEST_READ_TEXT':
+            handleTestReadText(message, sendResponse);
+            return true;
         case 'ELEMENT_PICKED':
-            chrome.runtime.sendMessage({ type: 'ELEMENT_PICKED', ...message }).catch(() => { });
+            chrome.runtime.sendMessage({ type: 'ELEMENT_PICKED', tabId: sender?.tab?.id || null, ...message }).catch(() => { });
             sendResponse({ success: true });
             return false;
         case 'PICKER_CANCELLED':
@@ -108,6 +111,59 @@ async function handlePickElement(sendResponse) {
         await chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ['content/picker.css'] });
         await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content/visual-picker.js'] });
         sendResponse({ success: true, tabId: tab.id });
+    } catch (error) {
+        sendResponse({ success: false, error: error.message });
+    }
+}
+
+async function handleTestReadText(message, sendResponse) {
+    try {
+        let tabId = Number(message?.tabId);
+
+        if (!Number.isInteger(tabId) || tabId <= 0) {
+            const tab = await findWebTab();
+            tabId = tab?.id;
+        }
+
+        if (!tabId) {
+            sendResponse({ success: false, error: 'Açık bir web sayfası bulunamadı.' });
+            return;
+        }
+
+        const [{ result }] = await chrome.scripting.executeScript({
+            target: { tabId },
+            func: (selector, wordIndex) => {
+                try {
+                    const el = document.querySelector(selector);
+                    if (!el) return { success: false, error: `Element bulunamadı: ${selector}` };
+
+                    let rawText = (el.innerText || el.textContent || el.value || '').trim();
+                    if (wordIndex) {
+                        const words = rawText.split(/\s+/).filter(w => w.length > 0);
+                        const input = String(wordIndex).trim();
+                        const rangeMatch = input.match(/^(\d+)[\s-]+(\d+)$/);
+
+                        if (rangeMatch) {
+                            const start = parseInt(rangeMatch[1], 10);
+                            const end = parseInt(rangeMatch[2], 10);
+                            if (start > 0 && end >= start) {
+                                rawText = words.slice(start - 1, end).join(' ');
+                            }
+                        } else if (/^\d+$/.test(input)) {
+                            const index = parseInt(input, 10);
+                            rawText = index > 0 && index <= words.length ? words[index - 1] : '';
+                        }
+                    }
+
+                    return { success: true, data: rawText };
+                } catch (error) {
+                    return { success: false, error: error.message };
+                }
+            },
+            args: [message.selector, message.wordIndex]
+        });
+
+        sendResponse(result || { success: false, error: 'Test sonucu alınamadı.' });
     } catch (error) {
         sendResponse({ success: false, error: error.message });
     }

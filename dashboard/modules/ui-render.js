@@ -10,7 +10,7 @@ export const Renderer = {
     /**
      * Akışlar Sayfası
      */
-    renderFlowsList(flows, container, onEdit, onDelete) {
+    renderFlowsList(flows, container, onEdit, onDelete, onDuplicate) {
         if (!flows.length) {
             container.innerHTML = '';
             document.getElementById('emptyState').classList.remove('hidden');
@@ -34,6 +34,7 @@ export const Renderer = {
                         <span>🕒 ${date}</span>
                     </div>
                     <div class="flow-card-actions">
+                        <button class="btn-icon duplicate-btn" data-id="${flow.id}" title="Kopyala">⧉</button>
                         <button class="btn-icon delete-btn" data-id="${flow.id}" title="Sil">🗑️</button>
                         <button class="btn btn-primary btn-sm edit-btn" data-id="${flow.id}">Düzenle</button>
                     </div>
@@ -42,6 +43,10 @@ export const Renderer = {
 
         container.querySelectorAll('.edit-btn').forEach(btn => btn.onclick = () => onEdit(btn.dataset.id));
         container.querySelectorAll('.delete-btn').forEach(btn => btn.onclick = (e) => onDelete(e, btn.dataset.id));
+        container.querySelectorAll('.duplicate-btn').forEach(btn => btn.onclick = (e) => {
+            e.stopPropagation();
+            onDuplicate?.(btn.dataset.id);
+        });
     },
 
     /**
@@ -83,6 +88,8 @@ export const Renderer = {
                         </div>
 
                         <span class="block-item-index">#${i + 1}</span>
+                        <button class="block-item-clone" data-id="${block.id}" title="Kopyala">⧉</button>
+                        <span class="block-toggle-arrow ${isSelected ? 'open' : ''}">›</span>
                         <button class="block-item-remove" data-id="${block.id}" title="Kaldır">×</button>
                     </div>
 
@@ -100,7 +107,7 @@ export const Renderer = {
     /**
      * Config Paneli
      */
-    renderConfig(block, container, onInput, onPick) {
+    renderConfig(block, container, onInput, onPick, onReadTextTest = null) {
         const typeDef = BLOCK_TYPES[block.type];
 
         // 1. Parametre Alanları
@@ -120,11 +127,22 @@ export const Renderer = {
                                 <span>${p.label}</span>
                             </label>
                         </div>`;
+            } else if (p.type === 'flow-select') {
+                inputHtml = `<select class="input" data-key="${p.key}" data-flow-select="true" data-current="${escapeHTML(val)}">
+                                <option value="" disabled ${!val ? 'selected' : ''}>Yükleniyor...</option>
+                             </select>`;
             } else if (p.type === 'selector') {
+                const isReadTextSelector = block.type === 'readText' && p.key === 'selector';
                 inputHtml = `<div class="selector-wrapper">
                                 <button class="selector-btn ${val ? 'has-value' : ''}" data-key="${p.key}">${val || 'Element Seç (Hedef)'}</button>
                                 ${val ? `<button class="selector-clear" title="Temizle" data-key="${p.key}">×</button>` : ''}
-                             </div>`;
+                             </div>
+                             ${isReadTextSelector ? `
+                             <div class="read-text-test-row">
+                                 <button type="button" class="read-text-test-btn" ${val ? '' : 'disabled'}>Test Et</button>
+                                 <div class="read-text-test-output" aria-live="polite">Seçilen elementten okunacak metni görmek için test edin.</div>
+                             </div>
+                             ` : ''}`;
             }
 
             return `<div class="config-field">
@@ -168,7 +186,27 @@ export const Renderer = {
                 const selectorBtn = wrapper.querySelector('.selector-btn');
                 selectorBtn.textContent = 'Element Seç (Hedef)';
                 selectorBtn.classList.remove('has-value');
+
+                const testBtn = wrapper.querySelector('.read-text-test-btn');
+                if (testBtn) testBtn.disabled = true;
+
+                const testOutput = wrapper.querySelector('.read-text-test-output');
+                if (testOutput) {
+                    testOutput.textContent = 'Seçilen elementten okunacak metni görmek için test edin.';
+                    testOutput.classList.remove('success', 'error');
+                }
+
                 btn.remove();
+            };
+        });
+
+        // Metin Oku testi
+        container.querySelectorAll('.read-text-test-btn').forEach(btn => {
+            btn.onclick = () => {
+                if (typeof onReadTextTest === 'function') {
+                    const outputEl = container.querySelector('.read-text-test-output');
+                    onReadTextTest(block, btn, outputEl);
+                }
             };
         });
     },
@@ -227,6 +265,7 @@ export function getParamSummary(block) {
         case 'condition': return `${p.check || ''}: ${p.value || ''}`;
         case 'loop': return `${p.count || 0}x tekrar`;
         case 'forEach': return p.selector || '';
+        case 'addButton': return `${p.label || 'Çalıştır'} → ${p.urlPattern || '?'}`;
         default: return '';
     }
 }

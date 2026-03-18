@@ -76,24 +76,6 @@ export function injectButtonModal() {
 
                         <div class="form-group">
                             <label>
-                                <span class="label-icon">🖼️</span>
-                                İkon
-                            </label>
-                            <div class="icon-picker" id="iconPicker">
-                                <div class="icon-option selected" data-icon="▶">▶</div>
-                                <div class="icon-option" data-icon="⚡">⚡</div>
-                                <div class="icon-option" data-icon="🚀">🚀</div>
-                                <div class="icon-option" data-icon="🔄">🔄</div>
-                                <div class="icon-option" data-icon="✨">✨</div>
-                                <div class="icon-option" data-icon="🎯">🎯</div>
-                                <div class="icon-option" data-icon="📋">📋</div>
-                                <div class="icon-option" data-icon="🤖">🤖</div>
-                                <div class="icon-option" data-icon="">—</div>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label>
                                 <span class="label-icon">🎨</span>
                                 Renk
                             </label>
@@ -125,11 +107,11 @@ export function injectButtonModal() {
                                 Boyut
                             </label>
                             <div class="size-picker" id="sizePicker">
-                                <div class="size-option" data-size="sm">
+                                <div class="size-option selected" data-size="sm">
                                     <span class="size-preview">Aᴬ</span>
                                     <span class="size-label">Küçük</span>
                                 </div>
-                                <div class="size-option selected" data-size="md">
+                                <div class="size-option" data-size="md">
                                     <span class="size-preview">Aᴬ</span>
                                     <span class="size-label">Normal</span>
                                 </div>
@@ -140,18 +122,6 @@ export function injectButtonModal() {
                             </div>
                         </div>
 
-                        <div class="form-group">
-                            <label>
-                                <span class="label-icon">🔲</span>
-                                Köşe Yuvarlaklığı
-                            </label>
-                            <div style="display: flex; align-items: center; gap: 12px;">
-                                <input type="range" id="btnRadius" min="0" max="30" value="8" class="range-input"
-                                    style="flex: 1; accent-color: var(--accent);">
-                                <span id="radiusValue"
-                                    style="font-size: 12px; color: var(--text-muted); min-width: 32px; text-align: right;">8px</span>
-                            </div>
-                        </div>
                     </div>
 
                     <div class="modal-divider"></div>
@@ -203,16 +173,6 @@ export function injectButtonModal() {
                             </label>
                             <input type="text" id="btnTooltip" class="input" placeholder="Otomasyon başlat...">
                         </div>
-
-                        <div class="toggle-field" id="autoRunToggle">
-                            <div class="toggle-field-text">
-                                <span class="toggle-field-label">⚡ Sayfa Açıldığında Çalıştır</span>
-                                <span class="toggle-field-desc">Butona tıklamadan akışı otomatik başlatır</span>
-                            </div>
-                            <div class="toggle-switch" id="autoRunSwitch"></div>
-                        </div>
-
-                        <div style="height: 10px;"></div>
 
                         <div class="toggle-field" id="pulseToggle">
                             <div class="toggle-field-text">

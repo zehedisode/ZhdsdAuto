@@ -1,4 +1,4 @@
-/* ===== Components: Selectors, Checkbox, Status Banner, Toast ===== */
+/* ===== Components: Selectors, Read Text Test, Checkbox, Status Banner, Toast ===== */
 
 /* Selectors */
 .selector-wrapper {
@@ -53,6 +53,62 @@
     background: #ef4444;
     color: white;
     border-color: #ef4444;
+}
+
+/* Read Text Test */
+.read-text-test-row {
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.read-text-test-btn {
+    width: fit-content;
+    min-width: 96px;
+    height: 34px;
+    padding: 0 12px;
+    border: 1px solid rgba(99, 102, 241, 0.35);
+    border-radius: 8px;
+    background: rgba(99, 102, 241, 0.18);
+    color: #c7d2fe;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.read-text-test-btn:hover:not(:disabled) {
+    background: rgba(99, 102, 241, 0.32);
+    border-color: rgba(99, 102, 241, 0.55);
+}
+
+.read-text-test-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.read-text-test-output {
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--text-muted);
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    padding: 8px 10px;
+    word-break: break-word;
+}
+
+.read-text-test-output.success {
+    color: #34d399;
+    border-color: rgba(52, 211, 153, 0.35);
+    background: rgba(16, 185, 129, 0.08);
+}
+
+.read-text-test-output.error {
+    color: #fca5a5;
+    border-color: rgba(248, 113, 113, 0.35);
+    background: rgba(239, 68, 68, 0.08);
 }
 
 /* Checkbox */
